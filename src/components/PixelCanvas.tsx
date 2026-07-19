@@ -38,6 +38,16 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
   const [dragRect, setDragRect] = useState<Rect | null>(null);
   const [selectedArea, setSelectedArea] = useState<Rect | null>(null);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
+
+  const [purchasing, setPurchasing] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function loadBlocks() {
@@ -168,6 +178,16 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
     };
   }
 
+  function hitTestBlock(point: { x: number; y: number }) {
+    return blocks.find(
+      (block) =>
+        point.x >= block.x &&
+        point.x <= block.x + block.width &&
+        point.y >= block.y &&
+        point.y <= block.y + block.height
+    );
+  }
+
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     const point = getFraction(e);
     dragStartRef.current = point;
@@ -177,8 +197,14 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
   }
 
   function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
-    if (!dragStartRef.current) return;
     const point = getFraction(e);
+
+    if (!dragStartRef.current) {
+      const hit = hitTestBlock(point);
+      setHoveredBlockId(hit?.link_url ? hit.id : null);
+      return;
+    }
+
     const start = dragStartRef.current;
     setDragRect({
       x: Math.min(start.x, point.x),
@@ -193,9 +219,13 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
     if (!dragRect) return;
 
     if (dragRect.width < 0.002 || dragRect.height < 0.002) {
+      const clicked = hitTestBlock({ x: dragRect.x, y: dragRect.y });
       setDragRect(null);
       setSelectionError(null);
       setSelectedArea(null);
+      if (clicked?.link_url) {
+        window.open(clicked.link_url, "_blank", "noopener,noreferrer");
+      }
       return;
     }
 
@@ -216,11 +246,77 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
     setSelectedArea(dragRect);
   }
 
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    setImageFile(file);
+    setImagePreviewUrl(file ? URL.createObjectURL(file) : null);
+  }
+
+  function handleCancelPurchase() {
+    setPurchasing(false);
+    setFormError(null);
+  }
+
+ async function handleSubmitPurchase(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!selectedArea) return;
+
+    if (!imageFile) {
+      setFormError("Selecciona una imagen.");
+      return;
+    }
+
+    try {
+      new URL(linkUrl);
+    } catch {
+      setFormError("Introduce un enlace válido (con https://).");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(buyerEmail)) {
+      setFormError("Introduce un email válido.");
+      return;
+    }
+
+    setFormError(null);
+    setSubmitting(true);
+
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    formData.append("linkUrl", linkUrl);
+    formData.append("buyerEmail", buyerEmail);
+    formData.append("x", String(selectedArea.x));
+    formData.append("y", String(selectedArea.y));
+    formData.append("width", String(selectedArea.width));
+    formData.append("height", String(selectedArea.height));
+
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.url) {
+        setFormError(data.error ?? "Error al iniciar el pago.");
+        setSubmitting(false);
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setFormError("Error de red. Inténtalo de nuevo.");
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div ref={containerRef} className="relative h-full w-full">
       <canvas
         ref={canvasRef}
-        className="block bg-[#0d0f17] cursor-crosshair"
+        className={`block bg-[#0d0f17] ${hoveredBlockId ? "cursor-pointer" : "cursor-crosshair"}`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -255,11 +351,90 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
           </span>
           <button
             type="button"
-            onClick={() => console.log("Selección confirmada:", selectedArea)}
+            onClick={() => setPurchasing(true)}
             className="rounded bg-gold px-3 py-1 font-medium text-black hover:bg-gold/90"
           >
             Continuar
           </button>
+        </div>
+      )}
+      {purchasing && selectedArea && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-lg border border-gold-dim/40 bg-background p-6 shadow-xl">
+            <h2 className="mb-1 text-lg font-semibold text-gold">Completa tu compra</h2>
+            <p className="mb-4 font-mono text-sm text-foreground/60">
+              {formatPrice(calculatePriceCents(selectedArea))}
+            </p>
+            <form onSubmit={handleSubmitPurchase} className="flex flex-col gap-4">
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wider text-foreground/50">
+                  Imagen
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="block w-full text-sm text-foreground/80 file:mr-3 file:rounded file:border-0 file:bg-gold file:px-3 file:py-1 file:text-black"
+                />
+                {imagePreviewUrl && (
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Vista previa"
+                    className="mt-2 h-24 w-full rounded border border-gold-dim/30 object-cover"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wider text-foreground/50">
+                  Enlace de destino
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://tu-web.com"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  className="w-full rounded border border-gold-dim/30 bg-black/30 px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs uppercase tracking-wider text-foreground/50">
+                  Tu email
+                </label>
+                <input
+                  type="email"
+                  placeholder="tu@email.com"
+                  value={buyerEmail}
+                  onChange={(e) => setBuyerEmail(e.target.value)}
+                  className="w-full rounded border border-gold-dim/30 bg-black/30 px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                />
+              </div>
+
+              {formError && (
+                <p className="text-sm text-red-400">{formError}</p>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelPurchase}
+                  className="rounded px-3 py-1 text-sm text-foreground/60 hover:text-foreground"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded bg-gold px-4 py-1 font-medium text-black hover:bg-gold/90 disabled:opacity-50"
+                >
+                  {submitting
+                    ? "Redirigiendo..."
+                    : `Pagar ${formatPrice(calculatePriceCents(selectedArea))}`}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
