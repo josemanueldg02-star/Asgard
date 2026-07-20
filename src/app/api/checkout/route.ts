@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { calculatePriceCents, type Rect } from "@/lib/canvas";
+import { calculatePriceCents, rectsOverlap, type Rect } from "@/lib/canvas";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -41,6 +41,23 @@ export async function POST(request: NextRequest) {
 
   const rect: Rect = { x, y, width, height };
   const priceCents = calculatePriceCents(rect);
+
+  const { data: existingBlocks, error: fetchError } = await supabaseAdmin
+    .from("pixel_blocks")
+    .select("x, y, width, height")
+    .in("status", ["pending", "approved"]);
+
+  if (fetchError) {
+    console.error("Error comprobando solapes:", fetchError);
+    return NextResponse.json({ error: "Error interno." }, { status: 500 });
+  }
+
+  if ((existingBlocks ?? []).some((block) => rectsOverlap(rect, block))) {
+    return NextResponse.json(
+      { error: "Esa zona ya no está disponible, elige otra." },
+      { status: 409 }
+    );
+  }
 
   const extension = image.name.split(".").pop() || "png";
   const path = `${randomUUID()}.${extension}`;

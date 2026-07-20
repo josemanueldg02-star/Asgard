@@ -53,8 +53,8 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
     async function loadBlocks() {
       const { data, error } = await supabase
         .from("pixel_blocks")
-        .select("id, x, y, width, height, image_url, link_url");
-
+        .select("id, x, y, width, height, image_url, link_url")
+        .eq("status", "approved");
       if (error) {
         console.error("Error loading pixel blocks:", error);
       } else {
