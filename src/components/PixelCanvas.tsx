@@ -23,9 +23,10 @@ type PixelBlock = {
 
 type PixelCanvasProps = {
   onBlocksChange?: (blocks: PixelBlock[]) => void;
+  maintenanceMode?: boolean;
 };
 
-export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
+export default function PixelCanvas({ onBlocksChange, maintenanceMode = false }: PixelCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageCache = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -189,6 +190,7 @@ export default function PixelCanvas({ onBlocksChange }: PixelCanvasProps) {
   }
 
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (maintenanceMode) return;
     const point = getFraction(e);
     dragStartRef.current = point;
     setSelectedArea(null);

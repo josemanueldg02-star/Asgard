@@ -32,6 +32,9 @@ export default function AdminPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -48,6 +51,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!session) return;
     loadPendingBlocks();
+    loadMaintenanceMode();
   }, [session]);
 
   async function loadPendingBlocks() {
@@ -64,6 +68,26 @@ export default function AdminPage() {
       setBlocks(data ?? []);
     }
     setLoadingBlocks(false);
+  }
+
+
+  async function loadMaintenanceMode() {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("maintenance_mode")
+      .eq("id", 1)
+      .single();
+    if (data) setMaintenanceMode(data.maintenance_mode);
+  }
+
+  async function toggleMaintenanceMode() {
+    setMaintenanceLoading(true);
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ maintenance_mode: !maintenanceMode, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    if (!error) setMaintenanceMode((prev) => !prev);
+    setMaintenanceLoading(false);
   }
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -142,12 +166,25 @@ export default function AdminPage() {
       <div className="mx-auto max-w-3xl">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-xl font-semibold text-gold">Bloques pendientes</h1>
-          <button
-            onClick={handleLogout}
-            className="rounded border border-gold-dim/40 px-3 py-1 text-sm text-foreground/70 hover:text-foreground"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleMaintenanceMode}
+              disabled={maintenanceLoading}
+              className={`rounded px-3 py-1 text-sm font-medium disabled:opacity-50 ${
+                maintenanceMode
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "border border-gold-dim/40 text-foreground/70 hover:text-foreground"
+              }`}
+            >
+              {maintenanceMode ? "🔧 Mantenimiento activado" : "Activar mantenimiento"}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded border border-gold-dim/40 px-3 py-1 text-sm text-foreground/70 hover:text-foreground"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         {actionError && <p className="mb-4 text-sm text-red-400">{actionError}</p>}
