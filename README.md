@@ -1,8 +1,10 @@
-# 🌌 Asgard
+# ASGARD
+
+*Compra tu trozo de esta web, para siempre*
 
 **Asgard** es una web que vende sus propios píxeles como espacio publicitario. Cualquier visitante puede seleccionar un área del lienzo, subir una imagen y un enlace, pagar de forma segura, y ver su anuncio publicado de forma permanente — al estilo del clásico "Million Dollar Homepage", pero adaptado a un lienzo que ocupa toda la pantalla y se adapta a cualquier resolución.
 
-![Asgard](docs/screenshots/asgard.png)
+![Asgard](docs/screenshots/Asgard.png)
 
 ## ¿En qué se basa?
 
