@@ -1,36 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌌 Asgard
 
-## Getting Started
+**Asgard** es una web que vende sus propios píxeles como espacio publicitario. Cualquier visitante puede seleccionar un área del lienzo, subir una imagen y un enlace, pagar de forma segura, y ver su anuncio publicado de forma permanente — al estilo del clásico "Million Dollar Homepage", pero adaptado a un lienzo que ocupa toda la pantalla y se adapta a cualquier resolución.
 
-First, run the development server:
+![Asgard](docs/screenshots/asgard.png)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ¿En qué se basa?
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La idea es sencilla: en lugar de vender espacio publicitario en formatos fijos y predefinidos, Asgard convierte el propio sitio web en un lienzo infinito de anuncios. Cada comprador elige exactamente qué porción de pantalla quiere, a un precio proporcional al tamaño del área seleccionada, y su imagen queda visible ahí para siempre.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ¿Qué hace?
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Permite seleccionar libremente cualquier rectángulo del lienzo, sin bloques predefinidos.
+- Calcula el precio en tiempo real según el tamaño del área seleccionada.
+- Procesa el pago de forma segura mediante Stripe.
+- Modera cada compra manualmente antes de publicarla, para evitar contenido inapropiado o enlaces fraudulentos.
+- Incluye un panel de administración privado para revisar y aprobar/rechazar compras.
+- Incorpora protección contra abuso (límite de peticiones, validación de imágenes) y un modo de mantenimiento para desactivar las compras temporalmente sin afectar al resto del sitio.
 
-## Learn More
+## Tecnologías utilizadas
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **[Next.js 16](https://nextjs.org/)** (App Router, Turbopack) con **React 19** y **TypeScript**
+- **[Tailwind CSS v4](https://tailwindcss.com/)** para el diseño
+- **[Supabase](https://supabase.com/)** — base de datos Postgres, autenticación y almacenamiento de imágenes
+- **[Stripe Checkout](https://stripe.com/checkout)** — procesamiento de pagos
+- Desplegado en **[Vercel](https://vercel.com/)**
