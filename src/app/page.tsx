@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import PixelCanvas from "@/components/PixelCanvas";
+import HelpButton from "@/components/HelpButton";
 
 type PixelBlock = {
   width: number;
@@ -31,6 +32,7 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen flex-col bg-background">
+      <HelpButton />
       <header className="flex shrink-0 flex-col items-center gap-1 border-b border-gold-dim/30 py-6">
         <h1 className="bg-gradient-to-r from-gold via-yellow-100 to-gold bg-clip-text text-4xl font-bold tracking-[0.3em] text-transparent uppercase">
           Asgard
